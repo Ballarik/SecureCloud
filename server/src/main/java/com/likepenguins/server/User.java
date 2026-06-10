@@ -1,6 +1,8 @@
 package com.likepenguins.server;
 
 import jakarta.persistence.*;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "users")
@@ -18,6 +20,15 @@ public class User {
 
     @Column(unique = true, nullable = false)
     private String email;
+
+    // Relazione Molti-a-Molti con le Cartelle
+    @ManyToMany
+    @JoinTable(
+        name = "user_cartelle", // Nome della tabella di giunzione nel DB SQLite
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "cartella_id")
+    )
+    private List<Folder> cartelleAutorizzate = new ArrayList<>();
 
     // Costruttore vuoto richiesto da JPA/Hibernate
     public User() {}
@@ -41,4 +52,8 @@ public class User {
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    // Getter e Setter per le cartelle autorizzate
+    public List<Folder> getCartelleAutorizzate() { return cartelleAutorizzate; }
+    public void setCartelleAutorizzate(List<Folder> cartelleAutorizzate) { this.cartelleAutorizzate = cartelleAutorizzate; }
 }

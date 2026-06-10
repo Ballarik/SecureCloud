@@ -1,13 +1,11 @@
 package com.likepenguins.server;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -16,32 +14,50 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
+    // 1. REGISTRAZIONE
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody Map<String, String> request) {
-        String username = request.get("username");
-        String password = request.get("password");
-        String email = request.get("email");
-
-        // 1. Validazione base dei dati ricevuti
-        if (username == null || password == null || email == null) {
-            return ResponseEntity.badRequest().body("Errore: Campi mancanti (username, password, email richiesti).");
+    public ResponseEntity<String> register(@RequestBody User newUser) {
+        // Usiamo l'Optional correttamente per controllare se esiste già lo username
+        Optional<User> existingUser = userRepository.findByUsername(newUser.getUsername());
+        if (existingUser.isPresent()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Errore: Questo username esiste già!");
         }
-
-        // 2. Controlla se lo username esiste già nel database SQLite
-        if (userRepository.findByUsername(username).isPresent()) {
-            return ResponseEntity.badRequest().body("Errore: Questo username è già registrato!");
-        }
-
-        // 3. Controlla se l'email esiste già
-        if (userRepository.findByEmail(email).isPresent()) {
-            return ResponseEntity.badRequest().body("Errore: Questa email è già associata a un account!");
-        }
-
-        // 4. Crea il nuovo utente e salvalo
-        // NOTA: Per ora salviamo la password così com'è. Successivamente la cifreremo con un algoritmo sicuro.
-        User newUser = new User(username, password, email);
+        
         userRepository.save(newUser);
+        return ResponseEntity.ok("Registrazione completata! Attendi che l'amministratore ti assegni una cartella.");
+    }
 
-        return ResponseEntity.ok("Utente registrato con successo nel database di Like Penguins! 🐧");
+    // 2. LOGIN
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody User loginRequest) {
+        Optional<User> userOpt = userRepository.findByUsername(loginRequest.getUsername());
+
+        // Controlla se l'utente NON esiste
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Errore: Credenziali errate.");
+        }
+
+        User user = userOpt.get();
+
+        // Controlla se la password in chiaro coincide
+        if (!user.getPassword().equals(loginRequest.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Errore: Credenziali errate.");
+        }
+
+        return ResponseEntity.ok("Login effettuato con successo!");
+    }
+
+    // 3. CARTELLE AUTORIZZATE
+    @GetMapping("/folders")
+    public ResponseEntity<?> getMyFolders(@RequestParam String username) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Utente non trovato.");
+        }
+
+        User user = userOpt.get();
+        // Restituisce la lista reale delle cartelle autorizzate per l'utente (può essere vuota all'inizio)
+        return ResponseEntity.ok(user.getCartelleAutorizzate());
     }
 }

@@ -1,12 +1,13 @@
-package com.likepenguins.server;
+package com.example.likepenguins.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import com.example.likepenguins.model.User;
+import org.springframework.data.repository.CrudRepository;
+import java.util.Optional;
 
-@Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends CrudRepository<User, Long> {
     
-    // Questo metodo magico dice a Spring Boot di creare automaticamente 
-    // la query per cercare un utente nel database tramite il suo username!
-    User findByUsername(String username);
+    Optional<User> findByUsername(String username);
+    
+    boolean existsByUsername(String username);
+    boolean existsByEmail(String email);
 }
